@@ -1,22 +1,36 @@
-#This is a bash code that shows how the datsets were mapped and denovo builds by Trinity carried out. This was follwed by a diamond blasx search to find virus sequences.
-#Read each line conatining the Aspera link to downoad the datasets. The Aspera links are stored in Aspera_links.txt 
+#This is a bash code that shows how the datsets were mapped to the D. melanogaster genome and denovo builds by Trinity carried out. This was follwed by a DIAMOND BLASTX search to find virus sequences.
+
+##Read each line conatining the Aspera link to downoad the datasets. The Aspera links are stored in Aspera_links.txt 
+
 while read line;
-#do the follwing
+
+###do the follwing
+
 do
-#Donwload file
+
+###Donwload file
+
 ascp -QT -l 300m -P33001 -i /localdisk/home/s1790958/asperaweb_id_dsa.openssh era-fasp@fasp.sra.ebi.ac.uk:$line  ./ 
-#Get the SRR number only from the Aspera link and call it stem
+
+###Get the SRR number only from the Aspera link and call it stem
+
 stem=$(echo $line | sed 's/.*\///g' | sed 's/\.fastq.gz*//g')
-#print the stem on the screen
+
+###print the stem on the screen
+
 echo $stem
-#make a while loop to test if the fastq file is broken and continue removing and downloading it until it is no longer broken
-#The while loop will keep running until it is no longer true, i.e. the file is not broken
+
+###Make a while loop to test if the fastq file is broken and continue removing and downloading it until it is no longer broken
+###The while loop will keep running until it is no longer true, i.e. the file is not broken
+
 	while !  gunzip  -v -t ${stem}.fastq.gz
 	do
 	rm ${stem}.fastq.gz
 	ascp -QT -l 300m -P33001 -i /localdisk/home/s1790958/asperaweb_id_dsa.openssh era-fasp@fasp.sra.ebi.ac.uk:$line  ./ 
 	done
-#If file is not broken run STAR
+
+###If file is not broken run STAR
+
 #Map each read to the annotated Drosophila genome using "STAR" but don't sort the bam file that contains the mapped reads 
 #so that we can sort it using "samtools" and create a stats file
 STAR --runThreadN 12 --genomeDir /mnt/drive2-3tb/shi_analysis_real/D.melanogaster/Drosophila_STAR_Reference --outReadsUnmapped Fastx --outSAMtype BAM Unsorted --readFilesCommand zcat --readFilesIn ${stem}.fastq.gz --outFileNamePrefix ${stem}.Dmel.Yanzhu.
