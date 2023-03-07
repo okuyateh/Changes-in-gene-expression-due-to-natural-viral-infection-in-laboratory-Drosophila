@@ -96,6 +96,7 @@ grep "[AGCTN]\{500,\}" -B 1 --no-group-separator ${stem}.TrinityBuild.fas > ${st
 #I have explained some of the options I used in the command below
 
 cd-hit-est -c 0.97 -i ${stem}.Trinity500Plus.fas  -p 1 -d 0 -b 3 -T 16 -o ${stem}.Trinity500Plus.filtered.fas
+
 #Now do a diamond search of thr refseq database using the diamond command as explained below.
 #Diamond is a sequence aligner and works just like NCBI-BLAST but its up to 500 to 20,000 X faster.It is suitable 
 #for protein-protein search and DNA-protein search on long and short reads including contigs (e.g. from TRINITY) and assemblies
