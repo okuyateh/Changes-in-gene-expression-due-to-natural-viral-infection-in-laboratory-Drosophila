@@ -179,4 +179,4 @@ do
 
 #Close the while loop and tell it where to read the files
 
-done < Aspera_links.txt 
+done < Aspera_links.txt
