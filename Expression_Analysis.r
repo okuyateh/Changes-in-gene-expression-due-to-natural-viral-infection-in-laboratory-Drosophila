@@ -16,14 +16,14 @@ Differential expression for repeated measures (dream) uses a linear model model 
 #- small sample size hypothesis test
 
 
-```{r}
+
 #Firstly, Remove all files from R's environment
 
 rm(list = ls())
-```
 
 
-```{r}
+
+
 #Now load all the libraries I will need
 library(edgeR)#edgeR package loads limma as a dependency)
 library(ggplot2)
@@ -33,18 +33,18 @@ library(variancePartition)
 library(BiocParallel)
 library(EnhancedVolcano) #To plot the Volcano plot
 library(ggfortify) #To convert the FBgn numbers to gene symbols
-```
 
-```{r}
+
+
 #Now it's time to read in the Count_Matrix. We need to  transform the count matrix since we want the gene names as rownames and sample names as column names
 Count_Matrix <- data.frame (t (read.table( "Processed_Count_Matrix_PRJNA258012_Yanzhu_11_11_2020.txt", sep = "\t", row.names = 1, header= TRUE)))
 
 
-```
 
 
 
-```{r}
+
+
 
 #Our Count_Matrix data has FlyBase identifier (FBgn#) as the rownames. To get the GeneSymbol, we use data from the the "org.Dm.eg.db" AnnotationDb object which was loaded in the beginning of our analysis. To do this, we use the "mapIds()" function, to look in the rownames of the Count_Matrix  which contain the "FLYBASE" keytype. For each"FLYBASE"keytype return the Gene SYmbol. If multiple Symbols are available, give me the first one. Save this in a data.frame called "FBgn_to_Symbol".
 
@@ -82,10 +82,10 @@ Count_Matrix <- column_to_rownames(Count_Matrix, var = "Gene_Symbols")
 
 
 #As we can see after removing the FBgn without corresponding gene symbols, the number of genes in the count matrix decreased from 16613 t0 16595
-```
 
 
-```{r}
+
+
 
 Meta_data <- read.table( "Processed_Metadata_PRJNA258012_Yanzhu_11_11_2020.txt", sep = "\t", row.names = 1, header = TRUE)
 
@@ -105,17 +105,12 @@ print(paste("Out of", nrow (subset(Meta_data)), "samples", nrow (subset(Meta_dat
 
 print(paste("Out of",nrow (subset(Meta_data)), "samples", nrow (subset(Meta_data, Galbut_Presence == "Yes" & Motts_Mill_Presence == "Yes")), "are infected with both Galbut & Motts_Mill")) 
 
-```
 
-```{r}
 
 Meta_data <- read.table( "Processed_Metadata_PRJNA258012_Yanzhu_11_11_2020.txt", sep = "\t", row.names = 1, header = TRUE)
 
-```
 
 
-
-```{r}
 #Now keep only samples in the Count_Matrix that are in the Meta_data. The t() function is used since the subset works on rows and the Count_Matrix and Meta_data are in different orientation.
 
 Count_Matrix <- subset(Count_Matrix, row.names(Count_Matrix) %in% row.names(Meta_data) )
@@ -137,10 +132,7 @@ Count_Matrix <- Count_Matrix[ , order(colnames(Count_Matrix))]
 
 
 print (paste ("row.names of Meta_data and colnames of Count_Matrix are identical:", identical(row.names( Meta_data), colnames (Count_Matrix) )))
-```
 
-
-```{r}
 
 # Filter genes by number of counts in the Count_Matrix data frame  by:
 
@@ -160,7 +152,7 @@ geneExpr <- DGEList( Count_Matrix[isexpr,] )
 
 geneExpr <-calcNormFactors( geneExpr )
 
-```
+
 
 #The dream method replaces two core functions of limma with a linear mixed model.
 
@@ -177,7 +169,7 @@ geneExpr <-calcNormFactors( geneExpr )
 
 #As mentioned earlier, voomWithDreamWeights  is the same as what described above for voom(), except that it allows random effects in the formula.
 
-```{r}
+
 # Specify parallel processing parameters. This is used implicitly by dream() to run in parallel. It allows three types of clusters to be used. Possible values are SOCK (default) and MPI. Instead of type=FORK use MulticoreParam.type=c("SOCK", "MPI", "FORK"),
 
 param <- SnowParam(7, "SOCK", progressbar=TRUE)
@@ -193,10 +185,7 @@ form <- ~ Author_Sex  +  Motts_Mill_Presence + Galbut_Presence +  Motts_Mill_Pre
 
 vobjDream <- voomWithDreamWeights( geneExpr, form, Meta_data )
 
-```
 
-
-```{r}
 
 # Fit the dream model on each gene
 # By default, uses the Satterthwaite approximation for the hypothesis test
@@ -205,18 +194,12 @@ vobjDream <- voomWithDreamWeights( geneExpr, form, Meta_data )
 fitmm <- dream( vobjDream, form, Meta_data)
 
 
-```
 
-
-```{r}
 #Now look at the coefficients of the model
 
 head(fitmm$coefficients)
 
-```
 
-
-```{r}
 #In our model Females and No Infection are the baselines
 #Extract results for each coefficient from fitmm using the topTable() function and save them in data frames. Put all the for each coefficient in a data frame, n=INF means everything
 
@@ -247,10 +230,8 @@ Res_Sex_Differences_Galbut <-topTable( fitmm , coef="Author_SexM:Galbut_Presence
 
 Res_Sex_Differences_Motts_Mill <-topTable( fitmm , coef="Author_SexM:Motts_Mill_PresenceYes", n = Inf )
 
-```
 
 
-```{r}
 #Now look at the plot for the change in gene expression in response to Motts_mill infectionin females
  EnhancedVolcano(Res_Galbut,
     lab = rownames(Res_Galbut),
@@ -275,20 +256,17 @@ Res_Sex_Differences_Motts_Mill <-topTable( fitmm , coef="Author_SexM:Motts_Mill_
 pointSize = 1.0,
     labSize = 3.0)
 
-```
 
 
 
 #Now that the dream analysis is done. We need to plot volcano plots to look at our results. 
 
-```{r}
+
 #Firstly, we will look at the plot for the overall Sex differences in immune response in the absence of Virus Infection. Here, we are going to highlight the sex-specific genes that were used in my barcode switching estimation. We need to know the gene symbols that corresponds to theose FBgn in FBgn_to_Symbol data.frame.
 
 subset (FBgn_to_Symbol, grepl("FBgn0004181|FBgn0000356|FBgn0000358|FBgn0000359|FBgn0000360|FBgn0011669|FBgn0011694|FBgn0046294|FBgn0053340|FBgn0250832|FBgn0259795|FBgn0259971|FBgn0259975|FBgn0262099|FBgn0262623|FBgn0270925", row.names(FBgn_to_Symbol)))
-```
 
 
-```{r}
 #Now that we know them we can draw the volcano plot and highlight these genes.  For this, I am making  xlim=c(-11, 11) so as to capture them in the graph.
 EnhancedVolcano(Res_Sex,
     lab = rownames(Res_Sex),
@@ -315,10 +293,8 @@ drawConnectors = TRUE,
 pointSize = 1.0,
     labSize = 2.0,
     colConnectors = 'black', widthConnectors = 0.5, boxedLabels = TRUE)
-```
 
 
-```{r}
 #Now look at the plot for the change in gene expression in response to Galbut  only  infection in females
  EnhancedVolcano(Res_Galbut_Females,
     lab = rownames(Res_Galbut_Females),
@@ -343,10 +319,8 @@ pointSize = 1.0,
 pointSize = 1.0,
     labSize = 3.0)
 
-```
 
 
-```{r}
 #Now look at the plot for the change in gene expression in response to Motts_mill infectionin females
  EnhancedVolcano(Res_Motts_Mill_Females,
     lab = rownames(Res_Motts_Mill_Females),
@@ -372,12 +346,8 @@ pointSize = 1.0,
     labSize = 3.0)
 
 
-```
 
 
-
-
-```{r}
 #Now look at the plot for the sex differences in gene expression in response to Galbut only infection 
 EnhancedVolcano(Res_Sex_Differences_Galbut ,
     lab = rownames(Res_Sex_Differences_Galbut ),
@@ -403,12 +373,8 @@ pointSize = 1.0,
     labSize = 3.0)
 
 
-```
 
 
-
-
-```{r}
 #Now look at the plot for the sex differences in gene expression in response to Motts Mill infection 
  EnhancedVolcano(Res_Sex_Differences_Motts_Mill,
     lab = rownames(Res_Sex_Differences_Motts_Mill),
@@ -431,7 +397,7 @@ pointSize = 1.0,
      xlim=c(-6, 6),
 pointSize = 1.0,
     labSize = 3.0)
-```
+
 
 
 
