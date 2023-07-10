@@ -6,10 +6,12 @@
 #Date written: 2023
 
 
-#Aim: I aim to quantify viral infections and investigate host-virus interaction using the transcriptomes of adult Drosophila that were initially sequenced #for other purposes, but which were also coincidentally infected with natural Drosophila viruses. Because these constitute entirely natural infections, #this study could help reveal the true nature of host gene expression in response to native viruses. 
+#Aim: I aim to quantify viral infections and investigate host-virus interaction using the transcriptomes of adult Drosophila that were initially sequenced #for other purposes, but which were also coincidentally infected with natural Drosophila viruses. 
+Because these constitute entirely natural infections, #this study could help reveal the true nature of host gene expression in response to native viruses. 
 
 
-#Data: I obtained nine large RNA-seq datasets of D. melanogaster from the European Nucleotide Archive (European Nucleotide Archive, 2022) that each #comprised 130 to over 900 sequencing libraries. The Project codes PRJNA258012, PRJNA261333, PRJNA281652, PRJNA305983, PRJNA325107, PRJNA483441 #PRJNA518903, PRJNA527284, and PRJNA75285 were used. 
+#Data: I obtained nine large RNA-seq datasets of D. melanogaster from the European Nucleotide Archive (European Nucleotide Archive, 2022) that each #comprised 130 to over 900 sequencing libraries. 
+The Project codes PRJNA258012, PRJNA261333, PRJNA281652, PRJNA305983, PRJNA325107, PRJNA483441 #PRJNA518903, PRJNA527284, and PRJNA75285 were used. 
 
 
 #STAR Version 2.7.3a
