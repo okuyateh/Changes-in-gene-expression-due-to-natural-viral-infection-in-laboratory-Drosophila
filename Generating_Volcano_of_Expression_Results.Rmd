@@ -1,0 +1,573 @@
+---
+title: "Generating Volcano Plots from Expression Analyses"
+output: html_document
+date: "2023-06-29"
+---
+
+The aim of this analysis is to generate Volcano plots of the data obtaiend from the expression analysis
+
+Software Versions 
+
+R version 4.2.3 (2023-03-15)
+ggplot2 version 3.4.2
+ggpubr version 0.6.0
+dplyr version 1.1.2 
+tibble version 3.2.1 
+EnhancedVolcano version 1.16.0 
+devEMF version 4.4 
+
+
+Firstly, Remove all files from R's environment
+
+```{r}
+
+rm(list = ls())
+```
+
+
+Load the required libraries 
+
+```{r}
+
+
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+library(tibble) 
+library(EnhancedVolcano) 
+library(devEMF)
+
+
+```
+
+
+Read in the expression files that were obtained from the dream analysis. These files all have the phrase "_Dream_24_06_2023.txt" in their name. Create a character vector of  all the files in the directory containing the phrase "_Dream_24_06_2023.txt" in their name and save this as "Expression_Filenames"
+
+
+```{r}
+
+
+Expression_Filenames <- list.files("/Users/s1790958/Library/CloudStorage/OneDrive-UniversityofEdinburgh/PhD_ Project_Obbard_Lab/DESEQ_Paper-oumie-laptop/UPDATED_DESEQ_FOR_PAPER/Expression_Paper_June_2023", pattern="_Dream_24_06_2023.txt")
+
+
+
+# Remove the file names with 'Intercept" or "Only_" in their name as we are not interested in those
+
+
+Expression_Filenames <- Expression_Filenames [-c(grep("Intercept_|Sex_Effect_Only",Expression_Filenames))]
+
+
+#Read all the files by using the lapply (list apply) command. Also, remove the phrase "_Dream_24_06_2023.txt"  to make them shorter.
+
+Expression_File_List <- lapply(Expression_Filenames, function(x) read.table(x, header = TRUE,sep = "\t", row.names = 1) )
+
+
+names(Expression_File_List) <- gsub("_Dream_24_06_2023.txt","", Expression_Filenames)
+
+
+```
+
+
+Now put the all the contents of the Expression_File_List in the global environment
+
+
+```{r}
+
+list2env (Expression_File_List, envir = .GlobalEnv)
+
+```
+
+
+We will draw a plot for of the main effects. i.e  for the effects of Sex, galbut virus, Motts Mill virus, nora virus, DCV, DAV, Thika virus, Brandeis virus , Craigies Hill, Bloomfield virus, and DMelSV.
+
+
+```{r}
+
+#Sex Effect Uninfected Plot 
+
+Sex_Effect_Uninfected_plot <- EnhancedVolcano(Sex_Effect_Uninfected,
+    lab = rownames(Sex_Effect_Uninfected),
+    x = 'logFC',
+    y = 'adj.P.Val',
+    title = 'Sex',
+        titleLabSize = 40,
+   subtitle = NULL,
+  caption = NULL,
+    pCutoff = 0.001,
+     FCcutoff = 0.5,
+    axisLabSize = 45,
+  ylab = expression('-Log'[10]*italic("P")),
+    legendPosition = 'none',
+    col=c('black', 'black', 'black', 'red3'),
+    colAlpha = 2, 
+   cutoffLineType = 'blank',
+    # xlim=c(-4, 4),
+#ylim=c(0, 20),
+pointSize = 6.0,
+    labSize = 8.0)
+
+
+
+
+#galbut virus Effect Plot 
+
+galbut_virus_Effect_plot <- EnhancedVolcano(galbut_virus_Effect,
+    lab = rownames(galbut_virus_Effect),
+    x = 'logFC',
+    y = 'adj.P.Val',
+    title = 'galbut virus',
+        titleLabSize = 40,
+   subtitle = NULL,
+  caption = NULL,
+    pCutoff = 0.001,
+     FCcutoff = 0.5,
+    axisLabSize = 45,
+  ylab = expression('-Log'[10]*italic("P")),
+    legendPosition = 'none',
+    col=c('black', 'black', 'black', 'red3'),
+    colAlpha = 2, 
+   cutoffLineType = 'blank',
+    # xlim=c(-4, 4),
+ylim=c(0, 11),
+pointSize = 6.0,
+    labSize = 8.0)
+
+
+
+#Motts Mill virus Effect Plot 
+
+Motts_Mill_virus_Effect_plot <- EnhancedVolcano(Motts_Mill_virus_Effect,
+    lab = rownames(Motts_Mill_virus_Effect),
+    x = 'logFC',
+    y = 'adj.P.Val',
+    title = 'Motts Mill virus',
+        titleLabSize = 40,
+   subtitle = NULL,
+  caption = NULL,
+    pCutoff = 0.001,
+     FCcutoff = 0.5,
+    axisLabSize = 45,
+  ylab = expression('-Log'[10]*italic("P")),
+    legendPosition = 'none',
+    col=c('black', 'black', 'black', 'red3'),
+    colAlpha = 2, 
+   cutoffLineType = 'blank',
+    # xlim=c(-4, 4),
+#ylim=c(0, 20),
+pointSize = 6.0,
+    labSize = 8.0)
+
+
+
+
+#nora virus Effect Plot 
+
+nora_virus_Effect_plot <- EnhancedVolcano(nora_virus_Effect,
+    lab = rownames(nora_virus_Effect),
+    x = 'logFC',
+    y = 'adj.P.Val',
+    title = 'nora virus',
+        titleLabSize = 40,
+   subtitle = NULL,
+  caption = NULL,
+    pCutoff = 0.001,
+     FCcutoff = 0.5,
+    axisLabSize = 45,
+  ylab = expression('-Log'[10]*italic("P")),
+    legendPosition = 'none',
+    col=c('black', 'black', 'black', 'red3'),
+    colAlpha = 2, 
+   cutoffLineType = 'blank',
+    # xlim=c(-4, 4),
+#ylim=c(0, 20),
+pointSize = 6.0,
+    labSize = 8.0)
+
+
+
+
+#DCV Effect Uninfected Plot 
+
+DCV_Effect_plot <- EnhancedVolcano(DCV_Effect,
+    lab = rownames(DCV_Effect),
+    x = 'logFC',
+    y = 'adj.P.Val',
+    title = 'DCV',
+        titleLabSize = 40,
+   subtitle = NULL,
+  caption = NULL,
+    pCutoff = 0.001,
+     FCcutoff = 0.5,
+    axisLabSize = 45,
+  ylab = expression('-Log'[10]*italic("P")),
+    legendPosition = 'none',
+    col=c('black', 'black', 'black', 'red3'),
+    colAlpha = 2, 
+   cutoffLineType = 'blank',
+  xlim=c(-2, 2),
+ylim=c(0, 4.5),
+pointSize = 6.0,
+    labSize = 8.0)
+
+
+
+#DAV Effect Uninfected Plot 
+
+DAV_Effect_plot <- EnhancedVolcano(DAV_Effect,
+    lab = rownames(DAV_Effect),
+    x = 'logFC',
+    y = 'adj.P.Val',
+    title = 'DAV',
+        titleLabSize = 40,
+   subtitle = NULL,
+  caption = NULL,
+    pCutoff = 0.001,
+     FCcutoff = 0.5,
+    axisLabSize = 45,
+  ylab = expression('-Log'[10]*italic("P")),
+    legendPosition = 'none',
+    col=c('black', 'black', 'black', 'red3'),
+    colAlpha = 2, 
+   cutoffLineType = 'blank',
+    # xlim=c(-4, 4),
+ylim=c(0, 7.5),
+pointSize = 6.0,
+    labSize = 8.0)
+
+
+
+#Thika virus Effect Uninfected Plot 
+
+Thika_virus_Effect_plot <- EnhancedVolcano(Thika_virus_Effect,
+    lab = rownames(Thika_virus_Effect),
+    x = 'logFC',
+    y = 'adj.P.Val',
+    title = 'Thika virus',
+        titleLabSize = 40,
+   subtitle = NULL,
+  caption = NULL,
+    pCutoff = 0.001,
+     FCcutoff = 0.5,
+    axisLabSize = 45,
+  ylab = expression('-Log'[10]*italic("P")),
+    legendPosition = 'none',
+    col=c('black', 'black', 'black', 'red3'),
+    colAlpha = 2, 
+   cutoffLineType = 'blank',
+    # xlim=c(-4, 4),
+ylim=c(0, 9),
+pointSize = 4.0,
+    labSize = 6.0)
+
+
+
+#Craigies Hill virus Effect Uninfected Plot 
+
+Craigies_Hill_virus_Effect_plot <- EnhancedVolcano(Craigies_Hill_virus_Effect,
+    lab = rownames(Craigies_Hill_virus_Effect),
+    x = 'logFC',
+    y = 'adj.P.Val',
+    title = 'Craigies Hill virus',
+        titleLabSize = 40,
+   subtitle = NULL,
+  caption = NULL,
+    pCutoff = 0.001,
+     FCcutoff = 0.5,
+    axisLabSize = 45,
+  ylab = expression('-Log'[10]*italic("P")),
+    legendPosition = 'none',
+    col=c('black', 'black', 'black', 'red3'),
+    colAlpha = 2, 
+   cutoffLineType = 'blank',
+    # xlim=c(-4, 4),
+ylim=c(0, 9),
+pointSize = 6.0,
+    labSize = 8.0)
+
+
+
+#Brandeis virus Effect Uninfected Plot 
+
+Brandeis_virus_Effect_plot <- EnhancedVolcano(Brandeis_virus_Effect,
+    lab = rownames(Brandeis_virus_Effect),
+    x = 'logFC',
+    y = 'adj.P.Val',
+    title = 'Brandeis virus',
+        titleLabSize = 40,
+   subtitle = NULL,
+  caption = NULL,
+    pCutoff = 0.001,
+     FCcutoff = 0.5,
+    axisLabSize = 45,
+  ylab = expression('-Log'[10]*italic("P")),
+    legendPosition = 'none',
+    col=c('black', 'black', 'black', 'red3'),
+    colAlpha = 2, 
+   cutoffLineType = 'blank',
+    # xlim=c(-4, 4),
+#ylim=c(0, 20),
+pointSize = 6.0,
+    labSize = 8.0)
+
+
+
+#Bloomfield virus Effect Uninfected Plot 
+
+Bloomfield_virus_Effect_plot <- EnhancedVolcano(Bloomfield_virus_Effect,
+    lab = rownames(Bloomfield_virus_Effect),
+    x = 'logFC',
+    y = 'adj.P.Val',
+    title = 'Bloomfield virus',
+        titleLabSize =25,
+   subtitle = NULL,
+  caption = NULL,
+    pCutoff = 0.001,
+     FCcutoff = 0.5,
+    axisLabSize = 30,
+  ylab = expression('-Log'[10]*italic("P")),
+    legendPosition = 'none',
+    col=c('black', 'black', 'black', 'red3'),
+    colAlpha = 2, 
+   cutoffLineType = 'blank',
+    # xlim=c(-4, 4),
+ylim=c(0, 7),
+pointSize = 4.0,
+    labSize = 6.0)
+
+
+
+
+#DMelSV Effect Uninfected Plot 
+
+DMelSV_Effect_plot <- EnhancedVolcano(DMelSV_Effect,
+    lab = rownames(DMelSV_Effect),
+    x = 'logFC',
+    y = 'adj.P.Val',
+    title = 'DMelSV',
+        titleLabSize = 25,
+   subtitle = NULL,
+  caption = NULL,
+    pCutoff = 0.001,
+     FCcutoff = 0.5,
+    axisLabSize = 30,
+  ylab = expression('-Log'[10]*italic("P")),
+    legendPosition = 'none',
+    col=c('black', 'black', 'black', 'red3'),
+    colAlpha = 2, 
+   cutoffLineType = 'blank',
+    # xlim=c(-4, 4),
+ylim=c(0, 3),
+pointSize = 4.0,
+    labSize = 6.0)
+
+
+
+```
+
+
+Combine the main effects plots i.e. for Sex effect,  galbut virus, Motts Mill virus, nora virus, DCV, DAV, Thika virus,   Brandeis virus , and Craigies Hill virus using ggarrage and save this save this as "figure". Then export "figure" it into an emf file called "Main_Effects_Volcano_Plot_28_06_2023.emf".
+
+```{r}
+
+
+emf(file="Main_Effects_Volcano_Plot_28_06_2023.emf", width=21, height=25, emfPlus = FALSE)
+
+figure <- ggarrange(Sex_Effect_Uninfected_plot, galbut_virus_Effect_plot, Motts_Mill_virus_Effect_plot, nora_virus_Effect_plot, DCV_Effect_plot, DAV_Effect_plot, Thika_virus_Effect_plot ,  Brandeis_virus_Effect_plot , Craigies_Hill_virus_Effect_plot ,
+                    labels = c("A", "B", "C", "D", "E", "F", "G", "H", "I"), font.label = list(size = 40, color = "black"),
+                    
+                    ncol = 3, nrow = 3)
+figure
+
+dev.off()
+```
+
+
+Combine the main effects plots of Bloomfield virus and DMelSV using ggarrage and save this save this as "figure", and export into in an emf file called "Bloomfield_virus_DMelSV_Volcano_Plot_28_06_2023.emf"
+
+```{r}
+
+emf(file="Bloomfield_virus_DMelSV_Volcano_Plot_28_06_2023.emf", width=10, height=6, emfPlus = FALSE)
+
+figure <- ggarrange( Bloomfield_virus_Effect_plot, DMelSV_Effect_plot,
+                    labels = c("A", "B"), font.label = list(size = 30, color = "black"),
+                    
+                    ncol = 2, nrow = 1)
+figure
+
+dev.off()
+```
+
+
+We will draw a plot for virus:sex interactions for gakbut virus, Motts Mill virus, nora virus, DCV, DAV, and Thika virus.
+
+```{r}
+
+#Draw Plots for each of the virus:Sex Effects
+
+#galbut virus:Sex Plot 
+
+galbut_virus_Sex_Interaction_plot <- EnhancedVolcano(galbut_virus_Sex_Interaction,
+    lab = rownames(galbut_virus_Sex_Interaction),
+    x = 'logFC',
+    y = 'adj.P.Val',
+    title = 'galbut virus:Sex',
+        titleLabSize = 30,
+   subtitle = NULL,
+  caption = NULL,
+    pCutoff = 0.001,
+     FCcutoff = 0.5,
+    axisLabSize = 35,
+  ylab = expression('-Log'[10]*italic("P")),
+    legendPosition = 'none',
+    col=c('black', 'black', 'black', 'red3'),
+    colAlpha = 2, 
+   cutoffLineType = 'blank',
+    # xlim=c(-4, 4),
+#ylim=c(0, 20),
+pointSize = 4.0,
+    labSize = 6.0)
+
+
+
+#Motts Mill virus:Sex Plot 
+
+Motts_Mill_virus_Sex_Interaction_plot <- EnhancedVolcano(Motts_Mill_virus_Sex_Interaction,
+    lab = rownames(Motts_Mill_virus_Sex_Interaction),
+    x = 'logFC',
+    y = 'adj.P.Val',
+    title = 'Motts Mill virus:Sex',
+    titleLabSize = 30,
+   subtitle = NULL,
+  caption = NULL,
+    pCutoff = 0.001,
+     FCcutoff = 0.5,
+    axisLabSize = 35,
+  ylab = expression('-Log'[10]*italic("P")),
+    legendPosition = 'none',
+    col=c('black', 'black', 'black', 'red3'),
+    colAlpha = 2, 
+   cutoffLineType = 'blank',
+     xlim=c(-4, 4),
+#ylim=c(0, 500),
+pointSize = 4.0,
+    labSize = 6.0)
+
+
+#nora virus:Sex Plot 
+
+nora_virus_Sex_Interaction_plot <- EnhancedVolcano(nora_virus_Sex_Interaction,
+    lab = rownames(nora_virus_Sex_Interaction),
+    x = 'logFC',
+    y = 'adj.P.Val',
+    title = 'nora virus:Sex',
+        titleLabSize = 30,
+   subtitle = NULL,
+  caption = NULL,
+    pCutoff = 0.001,
+     FCcutoff = 0.5,
+    axisLabSize = 35,
+  ylab = expression('-Log'[10]*italic("P")),
+    legendPosition = 'none',
+    col=c('black', 'black', 'black', 'red3'),
+    colAlpha = 2, 
+   cutoffLineType = 'blank',
+    # xlim=c(-4, 4),
+#ylim=c(0, 500),
+pointSize = 4.0,
+    labSize = 6.0)
+
+
+
+#DCV:Sex Plot 
+
+DCV_Sex_Interaction_plot <- EnhancedVolcano(DCV_Sex_Interaction,
+    lab = rownames(DCV_Sex_Interaction),
+    x = 'logFC',
+    y = 'adj.P.Val',
+    title = 'DCV:Sex',
+        titleLabSize = 30,
+   subtitle = NULL,
+  caption = NULL,
+    pCutoff = 0.001,
+     FCcutoff = 0.5,
+    axisLabSize = 35,
+  ylab = expression('-Log'[10]*italic("P")),
+    legendPosition = 'none',
+    col=c('black', 'black', 'black', 'red3'),
+    colAlpha = 2, 
+   cutoffLineType = 'blank',
+  xlim=c(-3.5, 3),
+ylim=c(0, 3),
+pointSize = 4.0,
+    labSize = 6.0)
+
+
+
+
+#DAV:Sex Plot 
+
+DAV_Sex_Interaction_plot <- EnhancedVolcano(DAV_Sex_Interaction,
+    lab = rownames(DAV_Sex_Interaction),
+    x = 'logFC',
+    y = 'adj.P.Val',
+    title = 'DAV:Sex',
+        titleLabSize = 30,
+   subtitle = NULL,
+  caption = NULL, 
+    pCutoff = 0.001,
+     FCcutoff = 0.5,
+    axisLabSize = 35,
+  ylab = expression('-Log'[10]*italic("P")),
+    legendPosition = 'none',
+    col=c('black', 'black', 'black', 'red3'),
+    colAlpha = 2, 
+   cutoffLineType = 'blank',
+   xlim=c(-3, 3),
+ylim=c(0, 11),
+pointSize = 4.0,
+    labSize = 6.0)
+
+
+
+#Thika virus:Sex Plot 
+
+Thika_virus_Sex_Interaction_plot <- EnhancedVolcano(Thika_virus_Sex_Interaction,
+    lab = rownames(Thika_virus_Sex_Interaction),
+    x = 'logFC',
+    y = 'adj.P.Val',
+    title = 'Thika virus:Sex',
+        titleLabSize = 30,
+   subtitle = NULL,
+  caption = NULL,
+    pCutoff = 0.001,
+     FCcutoff = 0.5,
+    axisLabSize = 35,
+  ylab = expression('-Log'[10]*italic("P")),
+    legendPosition = 'none',
+    col=c('black', 'black', 'black', 'red3'),
+    colAlpha = 2, 
+   cutoffLineType = 'blank',
+   #  xlim=c(-3.5, 3.5),
+ylim=c(0, 9),
+pointSize = 4.0,
+    labSize = 6.0)
+
+```
+
+
+Combine the virus:Sex plots and export it in an emf file called "Virus_Sex_Interaction_Volcano_Plot_28_06_2023.emf"
+
+```{r}
+
+emf(file="Virus_Sex_Interaction_Volcano_Plot_28_06_2023.emf", width=16, height=16, emfPlus = FALSE)
+
+figure <- ggarrange(galbut_virus_Sex_Interaction_plot, Motts_Mill_virus_Sex_Interaction_plot, nora_virus_Sex_Interaction_plot, DCV_Sex_Interaction_plot, DAV_Sex_Interaction_plot, Thika_virus_Sex_Interaction_plot,
+                    labels = c("A", "B", "C", "D", "E", "F"), font.label = list(size = 30, color = "black"),
+                    
+                    ncol = 3, nrow = 2)
+figure
+
+dev.off()
+```
+
+
