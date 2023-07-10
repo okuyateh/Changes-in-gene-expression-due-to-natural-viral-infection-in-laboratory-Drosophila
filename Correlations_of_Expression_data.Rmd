@@ -1,0 +1,277 @@
+---
+title: "Generating_Expression_Correlations"
+output: html_document
+date: "2023-06-29"
+---
+
+The aim of this analysis is to generate correlation plots of the data obtaiend from the expression analysis
+
+Software Versions 
+
+R version 4.2.3 (2023-03-15)
+ggplot2 version 3.4.2
+dplyr version 1.1.2 
+tibble version 3.2.1 
+Hmisc version 5.1-0 
+corrplot version 0.92
+devEMF version 4.4 
+
+
+Firstly, Remove all files from R's environment
+
+```{r}
+
+rm(list = ls())
+```
+
+
+load the libraries I require
+
+
+```{r}
+
+
+library(ggplot2)
+library(dplyr)
+library(Hmisc)
+library(corrplot) 
+```
+
+
+
+Read in the expression files that were obtained from the dream analysis.  Create a character vector of  all the files in the directory containing the phrase "_Dream_24_06_2023.txt" in their name and save this as "Expression_Filenames"
+
+
+```{r}
+
+Expression_Filenames <- list.files("/Users/s1790958/Library/CloudStorage/OneDrive-UniversityofEdinburgh/PhD_ Project_Obbard_Lab/DESEQ_Paper-oumie-laptop/UPDATED_DESEQ_FOR_PAPER/Expression_Paper_June_2023", pattern="_Dream_24_06_2023.txt")
+
+
+Expression_Filenames <- Expression_Filenames [-c(grep("Intercept_|Sex_Effect_Only|Uninfected",Expression_Filenames))]
+
+
+
+Expression_File_List <- lapply(Expression_Filenames, function(x) read.table(x, header = TRUE,sep = "\t", row.names = 1) )
+
+
+
+
+names (Expression_File_List) <- Expression_Filenames 
+```
+
+Make a vector of the genes that are common across the expression files in our analysis and name this Common_Genes
+
+
+```{r}
+
+Common_Genes <-  Reduce(intersect, lapply(Expression_File_List, row.names))
+
+```
+
+
+
+Now only keep the geens that are present in Common genes from each of the dataframes in "Expression_File_List"
+
+
+```{r}
+
+#Create an empty list called "Subset_Expression_File_List" to put the expression changes of the genes that will be used in the correlation plots i.e. Common genes
+
+Subset_Expression_File_List <- list()
+
+
+#Create a for loops to loop through each of the files in "Expression_File_List"
+
+
+for (i in 1:length( Expression_File_List)) {
+
+  
+#Create a dataframe of each file in "All_Expression_All_File"
+  
+  
+Expression_File_List[[i]] <- as.data.frame(Expression_File_List[[i]]) 
+
+
+#Order each dataframe in   "All_Expression_All_File" by the rownames i.e. the gene names
+
+
+Expression_File_List[[i]] <- Expression_File_List[[i]] [ order (row.names(Expression_File_List[[i]])), ] 
+
+
+#Make a subset of the expression changes of the genes found in "Common_Genes" in each dataframe in Expression_File_Listand save this as "Subset_File"
+
+
+Subset_File <-  subset( Expression_File_List[[i]], row.names(Expression_File_List[[i]] ) %in% Common_Genes)  
+
+
+#Append each Subset_File to a list called "Subset_Expression_File_List"
+
+Subset_Expression_File_List<- c(Subset_Expression_File_List, list(Subset_File))                                                                                                             
+}
+
+
+#Make the names in "Subset_Expression_File_List" as the names "Expression_File_List"
+
+names (Subset_Expression_File_List) <- names (Expression_File_List)
+
+```
+
+Now only select the LogFC values (i.e. change in expression)
+```{r}
+
+#Create an empty list called "LogFC_List" to store the LogFC values
+
+
+LogFC_List <- list()
+
+
+
+#each file in Subset_Expression_File_List
+
+
+for (i in 1:length( Subset_Expression_File_List)) {
+  
+
+#Get the logFC values in each expression file and save it as "LogFC_df"
+  
+  
+LogFC_df <- Subset_Expression_File_List[[i]]$logFC
+
+
+#make a dataframe of the LogFC_df
+
+
+LogFC_df <- as.data.frame(LogFC_df)
+
+#Name the column "LogFC"
+
+ 
+names (LogFC_df) <-  c("LogFC")
+
+
+#Put the LogFC_df into a list called "LogFC_List"
+
+
+LogFC_List  <-c(LogFC_List , list(LogFC_df) )
+
+}
+
+
+#Give the "LogFC_List" the same names as the "Subset_Expression_File_List"
+
+
+names (LogFC_List) <- names (Subset_Expression_File_List)
+
+
+```
+
+
+
+```{r}
+
+
+#Turn the LogFC_List into. dataframe and call it "Expression_File_df"
+
+Expression_File_df<- as.data.frame(LogFC_List)
+
+
+#Name the everything daatframe as the names of the LogFC_List
+
+
+names (Expression_File_df) <- names (LogFC_List)
+
+#Now remove "_Effect_Dream_24_06_2023.txt" or "_Interaction_Dream_24_06_2023.txt from the names of the columns in "Expression_File_df"
+
+
+names (Expression_File_df) <- gsub ("_Effect_Dream_24_06_2023.txt|_Interaction_Dream_24_06_2023.txt", " ", names (Expression_File_df))
+
+#Now remove "_" from the names of the columns in "Expression_File_df"
+
+
+names (Expression_File_df) <- gsub ("_", " ", names (Expression_File_df))
+
+#Rename each " Sex" to ":Sex"
+
+names (Expression_File_df) <- gsub (" Sex", ":Sex", names (Expression_File_df))
+
+
+
+
+```
+
+
+Create a dataframe with only the main virus effects on gene expression
+
+```{r}
+
+Main_Virus_Effect <- Expression_File_df[-c(grep ("Sex", names (Expression_File_df)))]
+```
+
+
+
+Create a dataframe with only the virus:sex effects on gene expression
+
+```{r}
+
+Sex_Virus_Interaction_Effect <- Expression_File_df[(grep (":Sex", names(Expression_File_df)))]
+
+
+```
+
+
+
+Generate correlations "pearson's" correlations using rcorr
+
+```{r}
+#Make a correlation matrix of the main virus effects on gene expression
+
+Corr_Matrix_Main_Virus_Effect <- rcorr(as.matrix (Main_Virus_Effect),type=c("pearson"))
+
+#Replace the NA with 0
+
+Corr_Matrix_Main_Virus_Effect$P[is.na(Corr_Matrix_Main_Virus_Effect$P)] <- 0
+Corr_Matrix_Main_Virus_Effect$r[is.na(Corr_Matrix_Main_Virus_Effect$r)] <- 0
+Corr_Matrix_Main_Virus_Effect$n[is.na(Corr_Matrix_Main_Virus_Effect$n)] <- 0
+
+#Make a correlation matrix of the virus:sex effects on gene expression
+
+Corr_Matrix_Sex_Virus_Interaction_Effect <- rcorr(as.matrix (Sex_Virus_Interaction_Effect),type=c("pearson"))
+
+#Replace the NA with 0
+
+Corr_Matrix_Sex_Virus_Interaction_Effect$P[is.na(Corr_Matrix_Sex_Virus_Interaction_Effect$P)] <- 0
+Corr_Matrix_Sex_Virus_Interaction_Effect$r[is.na(Corr_Matrix_Sex_Virus_Interaction_Effect$r)] <- 0
+Corr_Matrix_Sex_Virus_Interaction_Effect$n[is.na(Corr_Matrix_Sex_Virus_Interaction_Effect$n)] <- 0
+
+```
+
+
+
+Create a plot of the "Corr_Matrix_Main_Virus_Effect" and save this as "Main_Virus_Effect_Correlations_29_06_2023.emf"
+
+
+```{r}
+
+
+LabelCol = c("black")
+emf(file= "Main_Effect_Correlations_Plot_28_06_2023.emf", height =20, width = 20, emfPlus = FALSE)
+ 
+corrplot(Corr_Matrix_Main_Virus_Effect$r, type="upper", p.mat = Corr_Matrix_Main_Virus_Effect$P,  insig = "blank", method = "number", sig.level = 0.001, addgrid = TRUE, order = "alphabet", number.cex=3, tl.cex =3.5, cl.cex = 3, tl.col=LabelCol, col=colorRampPalette(c("firebrick","grey50", "blue"))(200))
+dev.off()
+```
+
+
+
+Create a plot of the "Corr_Matrix_Main_Virus_Effect" and save this as "Virus_Sex_Interaction_Effect_Correlations_29_06_2023.emf"
+
+
+```{r}
+
+
+
+LabelCol = c("black")
+emf(file= "Virus_Sex_Interaction_Effect_Correlations_Plot_28_06_2023.emf", height =10, width = 10, emfPlus = FALSE)
+ 
+corrplot(Corr_Matrix_Sex_Virus_Interaction_Effect$r, type="upper", p.mat = Corr_Matrix_Sex_Virus_Interaction_Effect$P,  insig = "blank", method = "number", sig.level = 0.001, addgrid = TRUE, order = "alphabet", number.cex=2, tl.cex =2, cl.cex = 2, tl.col=LabelCol, col=colorRampPalette(c("firebrick","grey50", "blue"))(200))
+dev.off()
+```
