@@ -6,7 +6,8 @@ output: html_document
 
 ---
 
-The aim of this analysis is to do Differential Expression (DE) analyses using dream. dream is built on limma/voom but for more than one random effect to be put in the model. We will use nora viruses, which is found in one fo the daatsets we analysed as an example of the expression analysis. 
+The aim of this analysis is to do Differential Expression (DE) analyses using dream. dream is built on limma/voom but for more than one random effect to be put in the model. 
+We will use nora viruses, which is found in one fo the daatsets we analysed as an example of the expression analysis. 
 
 
 
@@ -31,12 +32,13 @@ Firstly, Remove everything files from R's environment
 
 
 rm(list = ls())
+
 ```
 
 
 Now load nora_virus the libraries I will need
-```{r}
 
+```{r}
 
 library(edgeR)
 library(ggplot2)
@@ -114,11 +116,14 @@ Now put the count matrices and metadata in the lists "Count_Matrix_File_List" an
 list2env (Count_Matrix_File_List, envir = .GlobalEnv)
 
 list2env (Metadata_File_List, envir = .GlobalEnv)
+
 ```
 
-For this analysis of the effect of nora virus infection on gene expression, we will combine the count matrices of the five datasets cwith detectable levels of nora virus infection using using bind_rows from the dplyr package.These daatsets are "PRJNA483441", " PRJNA518903", "PRJNA325107", "PRJNA281652", "PRJNA261333". Put allt hese in a list called "nora_virus_Count_Matrix_df"
+For this analysis of the effect of nora virus infection on gene expression, we will combine the count matrices of the five datasets cwith detectable levels of nora virus infection using using bind_rows from the dplyr package.
+These daatsets are "PRJNA483441", " PRJNA518903", "PRJNA325107", "PRJNA281652", "PRJNA261333". Put allt hese in a list called "nora_virus_Count_Matrix_df"
 
 ```{r}
+
 nora_virus_Count_Matrix_df <-  dplyr::bind_rows (Processed_Count_Matrix_PRJNA483441, Processed_Count_Matrix_PRJNA518903, Processed_Count_Matrix_PRJNA325107, Processed_Count_Matrix_PRJNA281652, Processed_Count_Matrix_PRJNA261333)
 
 
@@ -150,6 +155,7 @@ The nora_virus_Count_Matrix_df data has FlyBase identifier (FBgn#) as the rownam
 
 
 ```{r}
+
 #To do this, we use the "mapIds()" function, to look in the rownames of the nora_virus_Count_Matrix_df  which contain the "FLYBASE" keytype. For each"FLYBASE"keytype return the Gene SYmbol. If multiple Symbols are available, give me the first one. Save this in a data.frame cnora_virused "FBgn_to_Symbol".
 
 
@@ -238,6 +244,7 @@ names (nora_virus_Metadata_df)
 
 
 write.table(nora_virus_Metadata_df  , file = "nora_virus_Metadata_19_06_2023.txt",  sep = "\t")
+
 ```
 
 
@@ -295,6 +302,7 @@ Now calculate normalization facotors from the "geneExpr" DGEList object using ca
 ```{r}
 
 geneExpr <-calcNormFactors( geneExpr )
+
 ```
 
 The dream method replaces two core functions of limma with a linear mixed model. As mentioned earlier, voomWithDreamWeights  is the same as what described above for voom(), except that it allows random effects in the formula.
@@ -332,6 +340,7 @@ Estimate weights using linear mixed model of dream
 ```{r}
 
 vobjDream <- voomWithDreamWeights ( geneExpr, form, nora_virus_Metadata_df   )
+
 ```
 
 Fit the dream model on each gene. By default, uses the Satterthwaite approximation for the hypothesis test
@@ -339,6 +348,7 @@ Fit the dream model on each gene. By default, uses the Satterthwaite approximati
 ```{r}
 
 fitmm <- dream( vobjDream, form, nora_virus_Metadata_df  )
+
 ```
 
 Now look at the coefficients of the model
@@ -346,10 +356,12 @@ Now look at the coefficients of the model
 ```{r}
 
 head(fitmm$coefficients)
+
 ```
 
 
 Now save the coefficients in daatframes for to export later
+
 ```{r}
 #Save the "Intercept" coefficient in a dataframe called Intercept 
 
@@ -384,10 +396,10 @@ nora_virus_and_Sex_Interaction_Effect  <- topTable( fitmm, coef="featureCounts_S
 
 ```
 
+Export the results for each coefficient extracted above as a txt file.
 
 ```{r}
 
-#Export the results for each coefficient extracted above as a txt file.
 
 write.table(Intercept, file = "Intercept_nora_virus_Dream_24_06_2023.txt", sep = "\t")
 
@@ -396,5 +408,6 @@ write.table(Sex_Effect, file = "Sex_Effect_Only_nora_virus_Dream_24_06_2023.txt"
 write.table(nora_virus_Effect, file = "nora_virus_Effect_Dream_24_06_2023.txt", sep = "\t")
 
 write.table(nora_virus_and_Sex_Interaction_Effect, file = "nora_virus_Sex_Interaction_Dream_24_06_2023.txt", sep = "\t")
+
 ```
 
