@@ -1,0 +1,340 @@
+---
+title: "Estimating Virus Prevalence"
+output: html_document
+date: "2023-06-30"
+---
+
+The aim of this analysis it to estimate the prevalence of each virus in the datasets.
+
+Software Versions 
+
+R version 4.2.0 (2022-04-22)
+ggplot2 version 3.4.2
+dplyr version 1.1.2 
+tibble version 3.2.1
+DescTools version 0.99.49
+ggpubr version 0.6.0     
+devEMF version 4.4 
+GRID VERSION 4.2.3
+
+
+
+Remove everything from R's global environment. 
+```{r}
+
+
+rm(list = ls())
+```
+
+
+
+Import the required libraries
+
+```{r}
+
+
+library(ggplot2)
+library(dplyr)
+library(tibble)
+library(DescTools)
+library(ggpubr)
+library(devEMF)
+library(grid)
+
+
+```
+
+
+Read in the Viral titre data that contains the number of libraries with detectable levels of each virus reads per dataset. And remove "_" from the virus names. The rownames of this file is the dataset project code whilst the 11 column names are the 10 viruses detected in the datasets and the Number of libraries per dataset. 
+
+```{r}
+
+
+Viral_Titre<- read.table("Viral_Titre_Data_29_06_23.txt" , header =TRUE, sep ="\t", row.names = 1 )
+
+
+names (Viral_Titre) <- gsub ("_", " ", names (Viral_Titre))
+
+```
+
+
+
+The number of libraries per dataset is  a column in the "Viral_Titre" dataset.  Put the number of libraries in separate dataframe called "Number_of_Libraries" as we will need this later to estimate prevalence. 
+
+```{r}
+
+Number_of_Libraries <- Viral_Titre$`Number of libraries`
+
+Number_of_Libraries<- as.data.frame(Number_of_Libraries)
+
+
+row.names(Number_of_Libraries) <- row.names(Viral_Titre)
+
+
+```
+
+
+Remove the number of number of libraries column from "Viral_Titre" and call this "Viral_Titre_Subset". We only want the number of libraries with a particular virus information.
+
+```{r}
+
+
+Viral_Titre_Subset <-  subset( Viral_Titre, select = -c(`Number of libraries`) )
+```
+
+Reorder the column in the "Viral_Titre_Subset" dataframe by putting viruses with the same genome structure together i.e. dsRNA ("galbut virus", "Bloomfield virus"), +ssRNA ("Motts Mill virus", "nora virus",  "DCV",  "DAV", "Thika virus", "Brandeis virus",  "Craigies Hill virus"), and -ssRNA ("DMelSV"). This will be needed later to colour the barchart of prevalence
+
+```{r}
+
+New_col_order <- c("galbut virus", "Bloomfield virus", "Motts Mill virus", "nora virus",  "DCV",  "DAV", "Thika virus", "Brandeis virus",  "Craigies Hill virus", "DMelSV")
+
+Viral_Titre_Subset <- Viral_Titre_Subset [, New_col_order]
+
+```
+
+Transform the "Viral_Titre_Subset" dataframe
+
+```{r}
+
+
+Viral_Titre_Subset <- as.data.frame (t(Viral_Titre_Subset))
+```
+
+Now time to estimate the prevalence of each virus per dataset
+
+```{r}
+
+
+#Put each of the virus names in a vector called "Virus_names"
+
+Virus_names <-  c("galbut virus", "Bloomfield virus", "Motts Mill virus", "nora virus",  "DCV",  "DAV", "Thika virus", "Brandeis virus",  "Craigies Hill virus", "DMelSV")
+
+
+#Create an empty list called "Prevalences_List" to store the prevalence of each virus per dataset
+
+
+Prevalences_List <- list()
+
+
+#Loop through each of the nine datasets to calculate prevalence of each virus
+
+
+for (dataset in 1:9) {
+  
+  
+#Create an empty vector called "Prevalences"
+  
+Prevalences <- vector()
+
+#Calculate the binomial prevalence of each virus per dataset and store this in "Prevalences". We are then converting the prevlaence to a percentage, add a value of 1 and then get the log10 of it. A log scale will allow easier visualization when we plot the bar chart later
+
+Prevalences <-log10 ((( BinomCI (as.numeric (Viral_Titre_Subset[,dataset ]), as.numeric(Number_of_Libraries[dataset,1]) , conf.level = 0.95,
+        method = "clopper-pearson") )*100)+1)
+
+#Make the rownames of the Prevalences as the virus names i.e. the rownames of the "Viral_Titre_Subset" dataframe
+
+row.names(Prevalences) <-row.names (Viral_Titre_Subset)
+
+
+#Make Prevalences a dataframe
+
+Prevalences <- as.data.frame (Prevalences)
+
+
+#Replace NAs with 0
+
+Prevalences[is.na(Prevalences)] <- 0
+
+
+#Put the virus names a  column in "Prevalences"
+
+Prevalences <- cbind (Prevalences, Virus_names )
+
+#Append Prevalences to the Prevalences_List
+
+Prevalences_List  <- c( Prevalences_List, list(Prevalences) )
+  
+}
+
+
+#Name the "Prevalences_List" the daatset project codes
+
+names (Prevalences_List ) <- row.names (Number_of_Libraries)
+
+
+```
+
+
+Replace the confidence intervals of viruses with prevalence estimates of zero in each dataset with NA. This is because we do not want confidence intervals drawn for viruses with a mean prevalence of zero
+
+```{r}
+
+for (dataset in 1:length(Prevalences_List)) {
+  
+  Prevalences_List[[dataset]]$upr.ci[Prevalences_List[[dataset]]$est == 0] <-NA
+  Prevalences_List[[dataset]]$lwr.ci[Prevalences_List[[dataset]]$est == 0] <-NA
+  
+}
+```
+
+
+Put the contents of Prevalences_List in the global environment i.e. nine dataframes representing the nine datasets analysed in this study. Each dataframe contains the ten viruses with the estimated prevalence and confidence intervals for each dataset. 
+
+```{r}
+
+list2env(Prevalences_List,envir=.GlobalEnv)
+
+```
+
+
+```{r}
+
+
+#Put each of the virus names in a vector called "Virus_names"
+
+Virus_names <- c("galbut virus", "Bloomfield virus", "Motts Mill virus", "nora virus",  "DCV",  "DAV", "Thika virus", "Brandeis virus",  "Craigies Hill virus", "DMelSV")
+
+#Convert Virus_names vector into a dataframe called Virus_names
+
+Virus_names  <- as.data.frame(Virus_names)
+
+#Factor the virus names
+
+Virus_Colour <- factor(Virus_names$Virus_names,levels = c("galbut virus", "Bloomfield virus", "Motts Mill virus", "nora virus",  "DCV",  "DAV", "Thika virus", "Brandeis virus",  "Craigies Hill virus", "DMelSV")
+                       )
+#Create a colour schemes matching each of the species in Viral_Titre$Species_name column. This will be our species colour on the ehatmap
+
+#Given there are three types of genome arrangements of the 10 viruses, we will create three colours from the Dynamic colour pallete and store this into a character vector called "Dynamic_Colours"
+
+Dynamic_Colours <-hcl.colors(3, palette = "Dynamic")
+
+#Check the colours in "Dynamic_Colours" and input this into a vector called "Virus_Colour_Scheme" that will be used in plotting the barchart
+
+Dynamic_Colours
+
+Virus_Colour_Scheme  <- colorRampPalette(c('#DB9D85', '#DB9D85', "#5CBD92",  "#5CBD92", "#5CBD92", "#5CBD92", "#5CBD92", "#5CBD92", "#5CBD92", "#ACA4E2" ))(length(unique(Virus_Colour )))[Virus_Colour ] 
+
+
+```
+ 
+ 
+ 
+ 
+```{r}
+
+ ggplot(PRJNA258012, aes(Virus_names, y=est)) + 
+  geom_bar(stat = "identity", fill = Virus_Colour_Scheme) + geom_errorbar(aes(ymin= lwr.ci, ymax=upr.ci ),width=0.5, linewidth = 3)  + theme_classic(base_size = 10)  +  theme(plot.margin = margin(r = 1), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1,face="bold")) + xlab("Virus") + ylab("PRJNA258012") + scale_y_continuous(limits = c(0, 2), breaks = seq(0, 2, by = 0.5))  +   ggtitle("Plot Title") +
+  theme(plot.title = element_text(hjust = 1.0)) + theme(plot.title = element_text(vjust = 10))
+
+
+``` 
+
+
+Now plot a barplot for each dataset
+
+```{r}
+
+#make the x-axis a factor so that ggplot2 wont sort the names
+
+PRJNA258012$Virus_names <- factor(PRJNA258012$Virus_names, levels =PRJNA258012$Virus_names)
+PRJNA261333$Virus_names <- factor(PRJNA261333$Virus_names, levels =PRJNA261333$Virus_names)
+PRJNA281652$Virus_names <- factor(PRJNA281652$Virus_names, levels =PRJNA281652$Virus_names)
+PRJNA305983$Virus_names <- factor(PRJNA305983$Virus_names, levels =PRJNA305983$Virus_names)
+PRJNA325107$Virus_names <- factor(PRJNA325107$Virus_names, levels =PRJNA325107$Virus_names)
+PRJNA483441$Virus_names <- factor(PRJNA483441$Virus_names, levels =PRJNA483441$Virus_names)
+PRJNA518903$Virus_names <- factor(PRJNA518903$Virus_names, levels =PRJNA518903$Virus_names)
+PRJNA527284$Virus_names <- factor(PRJNA527284$Virus_names, levels =PRJNA527284$Virus_names)
+PRJNA75285$Virus_names <- factor(PRJNA75285$Virus_names, levels =PRJNA75285$Virus_names)
+
+
+#PRJNA258012
+
+PRJNA258012_Graph <- ggplot(PRJNA258012, aes(Virus_names, y=est)) + 
+  geom_bar(stat = "identity", fill = Virus_Colour_Scheme) + geom_errorbar(aes(ymin= lwr.ci, ymax=upr.ci ),width=0.5, linewidth = 2.5)  + theme_classic(base_size = 150)  +  theme(plot.margin = margin(r = 1), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1,face="bold"), axis.title.y=element_text(angle=90)) + xlab("Virus") + ylab("PRJNA258012") + scale_y_continuous(limits = c(0, 2), breaks = c(0, 0.7, 1.7, 2))
+
+
+# PRJNA261333
+
+PRJNA261333_Graph <- ggplot(PRJNA261333, aes(x=Virus_names, y=est)) + 
+  geom_bar(stat = "identity", fill = Virus_Colour_Scheme) + geom_errorbar(aes(ymin= lwr.ci, ymax=upr.ci ),width=0.5 , linewidth = 2.5)  + theme_classic(base_size = 150)  +  theme(plot.margin = margin(r = 1), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1,face="bold")) + xlab("Virus") + ylab("PRJNA261333") + scale_y_continuous(limits = c(0, 2), breaks = c(0, 0.7, 1.7, 2))+ 
+               theme(axis.text.x = element_blank(),
+                     axis.ticks.x = element_blank(),
+                     axis.title.x = element_blank() , plot.margin = margin(1,1,0.1,1.2, "cm"))
+
+#PRJNA281652
+
+PRJNA281652_Graph <- ggplot(PRJNA281652, aes(x=Virus_names, y=est)) + 
+  geom_bar(stat = "identity", fill = Virus_Colour_Scheme) + geom_errorbar(aes(ymin= lwr.ci, ymax=upr.ci ),width=0.5 , linewidth = 2.5)  + theme_classic(base_size = 150)  +  theme(plot.margin = margin(r = 1), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1,face="bold")) + xlab("Virus") + ylab("PRJNA281652") + scale_y_continuous(limits = c(0, 2), breaks = c(0, 0.7, 1.7, 2))+ 
+               theme(axis.text.x = element_blank(),
+                     axis.ticks.x = element_blank(),
+                     axis.title.x = element_blank() , plot.margin = margin(1,1,0.1,1.2, "cm"))
+
+#PRJNA305983
+
+PRJNA305983_Graph <- ggplot(PRJNA305983, aes(x=Virus_names, y=est)) + 
+  geom_bar(stat = "identity", fill = Virus_Colour_Scheme) + geom_errorbar(aes(ymin= lwr.ci, ymax=upr.ci ),width=0.5 , linewidth = 2.5)  + theme_classic(base_size = 150)  +  theme(plot.margin = margin(r = 1), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1,face="bold")) + xlab("Virus") + ylab("PRJNA305983") + scale_y_continuous(limits = c(0, 2), breaks = c(0, 0.7, 1.7, 2))+ 
+               theme(axis.text.x = element_blank(),
+                     axis.ticks.x = element_blank(),
+                     axis.title.x = element_blank(), plot.margin = margin(1,1,0.1,1.2, "cm"))
+
+
+#PRJNA325107
+
+PRJNA325107_Graph <- ggplot(PRJNA325107, aes(x=Virus_names, y=est)) + 
+  geom_bar(stat = "identity", fill = Virus_Colour_Scheme) + geom_errorbar(aes(ymin= lwr.ci, ymax=upr.ci ),width=0.5 , linewidth = 2.5)  + theme_classic(base_size = 150)  +  theme(plot.margin = margin(r = 1), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1,face="bold")) + xlab("Virus") + ylab("PRJNA325107") + scale_y_continuous(limits = c(0, 2), breaks = c(0, 0.7, 1.7, 2))+ 
+               theme(axis.text.x = element_blank(),
+                     axis.ticks.x = element_blank(),
+                     axis.title.x = element_blank(), plot.margin = margin(1,1,0.1,1.2, "cm"))
+
+
+#PRJNA483441
+
+PRJNA483441_Graph <- ggplot(PRJNA483441, aes(x=Virus_names, y=est)) + 
+  geom_bar(stat = "identity", fill = Virus_Colour_Scheme) + geom_errorbar(aes(ymin= lwr.ci, ymax=upr.ci ),width=0.5 , linewidth = 2.5)  + theme_classic(base_size = 150)  +  theme(plot.margin = margin(r = 1), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1,face="bold")) + xlab("Virus") + ylab("PRJNA483441")+ scale_y_continuous(limits = c(0, 2), breaks = c(0, 0.7, 1.7, 2))+ 
+               theme(axis.text.x = element_blank(),
+                     axis.ticks.x = element_blank(),
+                     axis.title.x = element_blank(), plot.margin = margin(1,1,0.1,1.2, "cm"))
+
+
+
+#PRJNA518903
+
+PRJNA518903_Graph <- ggplot(PRJNA518903, aes(x=Virus_names, y=est)) + 
+  geom_bar(stat = "identity", fill = Virus_Colour_Scheme) + geom_errorbar(aes(ymin= lwr.ci, ymax=upr.ci ),width=0.5 , linewidth = 2.5)  + theme_classic(base_size = 150)  +  theme(plot.margin = margin(r = 1), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1,face="bold")) + xlab("Virus") + ylab("PRJNA518903") + scale_y_continuous(limits = c(0, 2), breaks = c(0, 0.7, 1.7, 2))+ 
+               theme(axis.text.x = element_blank(),
+                     axis.ticks.x = element_blank(),
+                     axis.title.x = element_blank(), plot.margin = margin(1,1,0.1,1.2, "cm"))
+
+
+#PRJNA527284
+
+PRJNA527284_Graph <- ggplot(PRJNA527284, aes(x=Virus_names, y=est)) + 
+  geom_bar(stat = "identity", fill = Virus_Colour_Scheme) + geom_errorbar(aes(ymin= lwr.ci, ymax=upr.ci ),width=0.5 , linewidth = 2.5)  + theme_classic(base_size = 150)  +  theme(plot.margin = margin(r = 1), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1,face="bold")) + xlab("Virus") + ylab("PRJNA527284") + scale_y_continuous(limits = c(0, 2), breaks = c(0, 0.7, 1.7, 2))+ 
+               theme(axis.text.x = element_blank(),
+                     axis.ticks.x = element_blank(),
+                     axis.title.x = element_blank(), plot.margin = margin(1,1,0.1,1.2, "cm"))
+
+#PRJNA75285
+
+PRJNA75285_Graph <- ggplot(PRJNA75285, aes(x=Virus_names, y=est)) + 
+  geom_bar(stat = "identity", fill = Virus_Colour_Scheme) + geom_errorbar(aes(ymin= lwr.ci, ymax=upr.ci ),width=0.5 , linewidth = 2.5)  + theme_classic(base_size = 150)  +  theme(plot.margin = margin(r = 1), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1,face="bold")) + xlab("Virus") + ylab("PRJNA75285") + scale_y_continuous(limits = c(0, 2), breaks = c(0, 0.7, 1.7, 2))+ 
+               theme(axis.text.x = element_blank(),
+                     axis.ticks.x = element_blank(),
+                     axis.title.x = element_blank(), plot.margin = margin(1,1,0.1,1.2, "cm"))
+
+```
+
+
+Now conbine the graphs of the seven datasets with detectable levels of virus and plot it. Save this as "Viral_Titre_Log_Scale_08_07_2023.emf"
+
+```{r}
+emf(file="Viral_Titre_Log_Scale_08_07_2023.emf", width=45, height=70,   emfPlus = FALSE)
+
+grid.draw(rbind( ggplotGrob(PRJNA261333_Graph),  ggplotGrob(PRJNA281652_Graph), ggplotGrob(PRJNA305983_Graph), ggplotGrob(PRJNA325107_Graph),ggplotGrob(PRJNA483441_Graph), ggplotGrob(PRJNA518903_Graph), ggplotGrob(PRJNA258012_Graph), size = "last"))
+
+dev.off()
+```
+
+
+
+
