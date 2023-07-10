@@ -1,0 +1,490 @@
+---
+title: "Gene Ontology (GO) Analysis using VISEAGO"
+author: "Oumie"
+date: "26/09/2023"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+The aim of this analysis is to carry out a data mining of biological functions and establish links between genes involved in our study using the ViSEAGO package in R, which stands forVisualization (VI), Semantic similarity (S) and Enrichment Analysis (EA) of Gene Ontology (GO). Exploring hundreds of statistically significant GO terms can be challenging. Hence, we will calculate similarity between pairs of GO terms using VISEAGO
+
+
+Software Versions 
+
+R version 4.2.0 (2022-04-22)
+ggplot2 version 3.4.2
+dplyr version 1.1.2 
+tibble version 3.2.1
+AnnotationDbi version 1.60.0 
+org.Dm.eg.db version 3.16.0 
+GO.db version 3.16.0 
+ViSEAGO version 1.12.0
+
+```{r}
+#Firstly, Remove everything files from R's environment
+
+rm(list = ls())
+```
+
+
+```{r}
+#load the required libraries
+
+library(ggplot2)
+library(dplyr)
+library(tibble)
+library(org.Dm.eg.db)
+library(AnnotationDbi)
+library(GO.db)
+library(ViSEAGO)
+```
+
+
+
+```{r}
+#Read in the tables containing the expression information of each gene that was obtained from the dream analysis. These files all have the phrase "_Dream_24_06_2023.txt" in their name
+
+#Create a list of the all the files in the directory containing the phrase "_Dream_24_06_2023.txt" in their name and save this as "filenames" 
+
+filenames <- list.files("~/Library/CloudStorage/OneDrive-UniversityofEdinburgh/PhD_ Project_Obbard_Lab/DESEQ_Paper-oumie-laptop/UPDATED_DESEQ_FOR_PAPER/Expression_Paper_June_2023",pattern="_Dream_24_06_2023.txt")
+
+#Remove the filenames with 'Intercept" or "Only_" in their name
+
+
+filenames <- filenames[!grepl('Intercept_|Only_', filenames)]
+
+#read all the files by using the lapply (list apply) command. Also, remove the phrase "_Dream_24_06_2023.txt"  to make them shorter.
+
+All_Files <- lapply(filenames, function(x) read.table(x, header = TRUE,sep = "\t", row.names = 1) )
+
+names(All_Files) <- gsub("_Dream_24_06_2023.txt","",filenames)
+
+#check the names of the fiels in "All_Files"
+
+names(All_Files)
+
+```
+
+
+
+
+
+
+```{r}
+#Convert the FBgn symbols to ENTREZID since VISEAGO accesses GO annotations from the NCBI EntrezGene, Ensembl or Uniprot databases. To get the ENTREZID we will use data from the the "org.Dm.eg.db" AnnotationDb object which was loaded in the beginning of our analysis. To do this, we use the "mapIds()" function, to look in the rownames of the Count_Matrix  which contain the "FLYBASE" keytype. For each"FLYBASE"keytype return the ENTREZID. If multiple ENTREZID are available, give me the first one. Save this in a data.frame called "FBgn_to_ENTREZID".
+
+FBgn_to_ENTREZID_function <- function(org.Dm.eg.db, Expression_Dataframe) {
+
+FBgn_to_ENTREZID <- data.frame( mapIds(org.Dm.eg.db, row.names(Expression_Dataframe),  column="ENTREZID" , keytype="SYMBOL", multiVals="filter"))
+
+
+FBgn_to_ENTREZID <-  FBgn_to_ENTREZID [ order(row.names(FBgn_to_ENTREZID )),, drop =FALSE]
+
+Expression_Dataframe <-  Expression_Dataframe[ order(row.names(Expression_Dataframe)),, drop =FALSE]
+
+#Check that they are in the same order
+
+print (paste (" The row.names of FBgn_to_ENTREZID  and Expression_Dataframe are in the same order:", identical(row.names(Expression_Dataframe), row.names (FBgn_to_ENTREZID ) )))
+
+Expression_Dataframe$ENTREZID <-  FBgn_to_ENTREZID [,1]
+
+#Some FBgn# do not have corresponding ENTREZID  and will be put as NA. However, we cannot have NA as rownames so remove them  
+Expression_Dataframe<- na.omit(Expression_Dataframe)
+
+#Now make the gene names as row.names 
+#First remove the current row.names which is the FBgn numbers
+row.names(Expression_Dataframe) <- NULL
+#Now make the gene symbols the rownames
+
+
+Expression_Dataframe <- column_to_rownames(Expression_Dataframe, var = "ENTREZID")
+
+return(Expression_Dataframe)
+
+
+}
+
+All_Files_ENTREZID <- lapply(1:length(All_Files), function(i) FBgn_to_ENTREZID_function(Expression_Dataframe = All_Files[[i]], org.Dm.eg.db ))
+
+names(All_Files_ENTREZID) <- names(All_Files)
+
+```
+
+
+
+```{r}
+#Now select all the gene IDs that were used in our analyses for each data.frame and store this in a list called "All_Genes". We can also do it for just one since they are the same for all the data.frames in All_Files_ENTREZID.
+
+All_Genes <- lapply (All_Files_ENTREZID, function (All_Files_ENTREZID) row.names (All_Files_ENTREZID))
+
+#Add the phrase "All_Genes" to each of their names
+
+names(All_Genes ) <-  names (All_Files_ENTREZID)
+
+#For each data.frame, select the significant genes with increased expression in a list called Expression_Changes_Vectors". A treshold of logFC >0.5 | logFC < -0.5 and adj.P.Val<0.001  was used
+
+Expression_Changes_Vectors <- lapply (All_Files_ENTREZID, function (All_Files_ENTREZID) row.names (subset (All_Files_ENTREZID, adj.P.Val<0.001 & (logFC > 0.5 | logFC < -0.5) )))
+
+#Add the phrase "Increased_Expression" to each of their names
+names(Expression_Changes_Vectors)<- names (All_Files_ENTREZID)
+
+
+#For the GO Analysis, there needs to be at least two differentially expressed genes. Hence, separate the items in Expression_Changes_Vectors into those with at least two and those without.
+
+#Find items in the  Expression_Changes_Vectors with at least two differentially expressed genes and save this in Expression_Changes_Vectors_Subset
+
+Expression_Changes_Vectors_Subset <- list()
+
+for (i in 1:length (Expression_Changes_Vectors))
+{
+  
+  print (length (Expression_Changes_Vectors[[i]]))
+  
+  if (length (Expression_Changes_Vectors[[i]]) >= 2)
+      
+    {At_least_Two_Genes <-  Expression_Changes_Vectors[i]
+    
+    Expression_Changes_Vectors_Subset <- append ( Expression_Changes_Vectors_Subset, At_least_Two_Genes)
+    
+  }
+}
+
+
+#Subset "All_Files_ENTREZID" into "All_Files_ENTREZID_Subset", which contains only the expression changes in  "Expression_Changes_Vectors_Subset"
+
+All_Files_ENTREZID_Subset <-   All_Files_ENTREZID[names(Expression_Changes_Vectors_Subset) ]
+  
+All_Genes_Subset <-  All_Genes [names(Expression_Changes_Vectors_Subset) ]
+ 
+
+ 
+```
+
+
+
+```{r}
+# connect to Bioconductor
+
+Bioconductor<-ViSEAGO::Bioconductor2GO()
+```
+
+
+
+```{r}
+#In order to know if the species of interest (Drosophila melanogaster here) is supported by the database, we can display the available organisms in an interactive table using ViSEAGO::available_organisms method. The organism key identifier is always displayed in the first column of the table.
+
+# Display table of available organisms with Bioconductor
+
+ViSEAGO::available_organisms(Bioconductor)
+```
+
+```{r}
+#As we can see our target organism "org.Dm.eg.db" is supported by the bioconductor databese. Now we need to provide the organism key identifiant based on the Bioconductor genomic resource, in order to extract and store the species GO annotations using ViSEAGO::annotate() method. These will be stored as a "gene2GO-class object" which we will name "myGENE2GO".
+
+myGENE2GO<-ViSEAGO::annotate(
+    "org.Dm.eg.db",
+    Bioconductor
+)
+
+```
+
+
+
+```{r}
+
+
+#First, we create a topGOdata object, using ViSEAGO::create_topGOdata method, with inputs as: genes selection, genes background, GO terms category used (MF, BP, or CC), and minimum of annotated genes by GO terms (nodeSize).
+
+#The ViSEAGO::create_topGOdata function takes the following arguments:
+
+#1. allGenes: All the genes whose expression were measured in our dream analyses
+
+#2. geneSel: genes of interest.
+
+#3. gene2GO: a gene2GO-class object created by annotate method earlier.
+
+#4. ont: The GO ontology I am interested in. This can be MF (Molecuar Function), "BP" (Biological Process), or "CC" (Cellular Component)
+
+#5. nodeSize: an integer larger or equal to 1. This parameter is used to prune the GO hierarchy from the terms which have less than nodeSize annotated genes (after the true path rule is applied).
+
+#Create a function to use to generate the  topGOdata object and storee this in topGOdata_Object_List.
+
+
+
+topGOdata_Object_List <- list()
+
+for (i in 1:length(All_Genes_Subset))
+{
+  
+ topGOdata_Object <-  ViSEAGO::create_topGOdata(allGenes = All_Genes_Subset [[i]], geneSel = Expression_Changes_Vectors_Subset[[i]], gene2GO=myGENE2GO, 
+  ont="BP",nodeSize=5
+)
+ 
+
+  topGOdata_Object_List <- append ( topGOdata_Object_List, topGOdata_Object )
+}
+
+names (topGOdata_Object_List) <- names(All_Genes_Subset)
+
+```
+
+
+
+```{r}
+#Lets have a glimpse of the "topGOdata_Object_List" by looking at the first item in the "topGOdata_Object_List"
+
+glimpse(topGOdata_Object_List[1])
+```
+
+
+
+
+```{r}
+#Now, we perform the GO enrichment tests for BP category with Fisher’s exact test with one of the four available algorithms (classic, elim, weight, and weight01) using topGO::runTest method.
+
+GO_Analysis_function <- function(topGOdata) {
+
+classic <- topGO::runTest(
+  topGOdata,
+  algorithm ="classic",
+  statistic = "fisher"
+)
+
+return(classic)
+
+}
+
+
+GO_Analysis_List <- lapply(topGOdata_Object_List, function (topGOdata_Object_List) GO_Analysis_function ( topGOdata = topGOdata_Object_List ))
+
+names(GO_Analysis_List) <-  sub("topGOdata_Object", "GO_Analysis", names(topGOdata_Object_List))
+
+```
+
+
+
+
+```{r}
+#There are no significant GO terms for the effect of Bloomfield virus on gene expression so it will be remove from the GO_Analysis and topGOdata_object lists before merging them
+
+topGOdata_Object_List_Subset <- topGOdata_Object_List  [-c(grep ("Bloomfield_virus_Effect", names (topGOdata_Object_List )))]
+
+GO_Analysis_List_Subset <- GO_Analysis_List [-c(grep ("Bloomfield_virus_Effect", names (GO_Analysis_List)))]
+
+
+ 
+ 
+```
+
+
+```{r}
+#We combine results of enrichment tests into an object using ViSEAGO::merge_enrich_terms method.
+Merged_data <- list()
+
+for (i in 1:length (names (topGOdata_Object_List_Subset ))){
+name <- list ()  
+m <- topGOdata_Object_List_Subset  [[i]]
+p <- GO_Analysis_List_Subset [[i]]
+name <- ViSEAGO::merge_enrich_terms(
+   Input=list(
+        name =c( "m", "p" )
+    ))
+ 
+Merged_data <-append (Merged_data, name )
+
+}
+
+
+names (Merged_data) <- sub("topGOdata_Object", "VISEAGO_Enriched_GO_Terms", names(topGOdata_Object_List_Subset ))
+```
+
+
+```{r}
+# print one of the merged results ViSEAGO::show_table method. The printed table contains for each enriched GO terms, additional columns including the list of significant genes and frequency (ratio of number of significant genes to number of background genes) evaluated by comparison.
+
+
+
+ViSEAGO::show_table(Merged_data[[2]])
+```
+
+```{r}
+#We remove two items from the "Merged_data" as they contain no enriched terms before exporting each item in "Merged data". 
+Merged_data[["Craigies_Hill_virus_Effect_VISEAGO_Enriched_GO_Terms", "DAV_Sex_Interaction_VISEAGO_Enriched_GO_Terms"]]
+```
+
+```{r}
+# Export Results  as excel files
+lapply(1:length(Merged_data ), function(i) 
+ViSEAGO::show_table ( Merged_data [[i]],
+   paste(names(Merged_data [i]), "02_07_2023.xls")
+))
+```
+
+
+
+
+
+```{r}
+#First before calculating the SS between GO terms, we need to compute the Information content (IC) on the given ontology, and create a GO_SS-class object using the ViSEAGO::build_GO_SS function. The GO_SS-class object is  required by compute_SS_distances function to compute GO semantic similarity between enriched GO terms or groups of terms.
+
+#Create a "my_GOs_function" 
+my_GOs_function <- function(Annotation_File,  Merged_data) {
+myGOs <- ViSEAGO::build_GO_SS(
+    gene2GO = Annotation_File,
+    enrich_GO_terms =  Merged_data
+)
+return(myGOs)
+}
+
+#Run the "my_GOs_function" on the individual merged data
+MyGOs <- lapply(  Merged_data, function (   Merged_data) my_GOs_function (Annotation_File = myGENE2GO,   Merged_data=    Merged_data))
+
+names(MyGOs) <-   names(  Merged_data)
+
+```
+
+
+
+```{r}
+# Create a "SS_distance_function" to compute all available Semantic Similarity (SS) measures for the individual results using the "Wang"algorithm.
+
+SS_distance_function <- function(my_GOs) {
+SS_distance <- ViSEAGO::compute_SS_distances(
+    my_GOs,
+    distance="Wang"
+)
+return(SS_distance)
+}
+
+SS_distances <- lapply(MyGOs, function (MyGOs) SS_distance_function  (my_GOs = MyGOs ))
+names(SS_distances) <-   names(MyGOs)
+
+# compute all available Semantic Similarity (SS) measures for the compared results
+SS_distances <- lapply(MyGOs, function (MyGOs) SS_distance_function  (my_GOs = MyGOs))
+
+names(SS_distances) <- names(MyGOs)
+
+```
+
+
+
+
+```{r}
+#To fully explore the results of this functional analysis, a hierarchical clustering method using ViSEAGO::GOterms_heatmap is performed based on one of SS distances (i.e Wang) between the enriched GO terms and a chosen aggregation criteria (i.e ward.D2).
+
+
+wardD2_function <- function(myGOs) {
+
+wardD2 <- ViSEAGO::GOterms_heatmap(
+    myGOs,
+      showIC=FALSE,
+    showGOlabels=TRUE,
+    GO.tree=list(
+        tree=list(
+            distance="Wang",
+            aggreg.method="ward.D2"
+        ),
+        cut=list(
+            dynamic=list(
+                pamStage=TRUE,
+                pamRespectsDendro=TRUE,
+                deepSplit=2,
+                minClusterSize =2))
+    ),
+    samples.tree=NULL
+)
+
+return(wardD2)
+}
+
+wardD2_List <- sapply(SS_distances , function (SS_distances) wardD2_function  (myGOs = SS_distances ))
+
+names(wardD2_List) <-   gsub ("myGOs", "", names(SS_distances))
+
+```
+
+
+
+
+```{r}
+#For some of the items in "wardD2_List", we want to obtain a figure of the GO terms whilst for some we want obtain a figure of the GO clusters for easier visualisation (i.e. too many GO terms)
+
+#The ones we want to create GO terms for will be stored in "wardD2_List_Subset_GO_Terms" 
+wardD2_List_Subset_GO_Terms <- wardD2_List[c(1, 2, 4, 5, 6, 7)]
+
+#The ones we want to create GO cluster for will be stored in "wardD2_List_Subset_GO_Clusters" 
+
+wardD2_List_Subset_GO_Clusters <- wardD2_List[-c(1, 2, 4, 5, 6, 7)]
+```
+
+
+```{r}
+#Export a pdf image of each of the items in "wardD2_List_Subset_GO_Terms" 
+for (i in 1:length(wardD2_List_Subset_GO_Terms ) ){
+ViSEAGO::show_heatmap(
+   wardD2_List_Subset_GO_Terms [[i]],
+    "GOterms", paste (names (wardD2_List_Subset_GO_Terms [i]), "02_07_2023.pdf", sep = "_")
+) 
+}
+```
+
+
+```{r}
+#To create GO clusters for the items in "wardD2_List_Subset_GO_Clusters" , we need to calculate semantic similarites between clusters of GO terms. The available methods for calculating clusters of GO terms SS are "max", "avg","rcmax", and "BMA".
+
+Wang_clusters_wardD2_function <- function(wardD2) {
+
+Wang_clusters_wardD2 <-ViSEAGO::compute_SS_distances(
+    wardD2,
+    distance=c("max", "avg","rcmax", "BMA")
+)
+return(Wang_clusters_wardD2)
+}
+
+Wang_clusters_wardD2_List <- lapply(wardD2_List_Subset_GO_Clusters, function (wardD2_List_Subset_GO_Clusters) Wang_clusters_wardD2_function (wardD2 = wardD2_List_Subset_GO_Clusters))
+
+
+names(Wang_clusters_wardD2_List)  <- gsub ("GO_Terms", "GO_Clusters", names(wardD2_List_Subset_GO_Clusters) )
+```
+
+```{r}
+
+#Now compute a clustering heatmap based on GO groups semantic similarity (computed with compute_SS_distances).
+
+Wang_clusters_wardD2_function <- function(wardD2) {
+
+Wang_clusters_wardD2<-ViSEAGO::GOclusters_heatmap(
+    wardD2,
+    tree=list(
+        distance="BMA",
+        aggreg.method="ward.D2"
+    )
+)
+return(Wang_clusters_wardD2)
+}
+
+Wang_clusters_wardD2_List <- lapply(Wang_clusters_wardD2_List, function (Wang_clusters_wardD2_List) Wang_clusters_wardD2_function (wardD2 = Wang_clusters_wardD2_List ))
+
+names(Wang_clusters_wardD2_List) <-   names(Wang_clusters_wardD2_List)
+
+
+```
+
+
+```{r}
+
+#Export a pdf image of each of the items in "Wang_clusters_wardD2_List" 
+for (i in 1:length(Wang_clusters_wardD2_List) ){
+ViSEAGO::show_heatmap(
+   Wang_clusters_wardD2_List[[i]],
+    "GOclusters", paste (names (Wang_clusters_wardD2_List[i]), "02_07_2023.pdf", sep = "_")
+)
+}
+```
+
+
+
+
+
+
