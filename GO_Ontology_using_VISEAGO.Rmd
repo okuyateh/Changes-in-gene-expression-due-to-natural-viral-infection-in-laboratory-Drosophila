@@ -7,7 +7,8 @@ output:
   html_document: default
 ---
 
-The aim of this analysis is to carry out a data mining of biological functions and establish links between genes involved in our study using the ViSEAGO package in R, which stands forVisualization (VI), Semantic similarity (S) and Enrichment Analysis (EA) of Gene Ontology (GO). Exploring hundreds of statistically significant GO terms can be challenging. Hence, we will calculate similarity between pairs of GO terms using VISEAGO
+The aim of this analysis is to carry out a data mining of biological functions and establish links between genes involved in our study using the ViSEAGO package in R, which stands forVisualization (VI), Semantic similarity (S) and Enrichment Analysis (EA) of Gene Ontology (GO).
+Exploring hundreds of statistically significant GO terms can be challenging. Hence, we will calculate similarity between pairs of GO terms using VISEAGO
 
 
 Software Versions 
@@ -84,7 +85,8 @@ names(All_Files)
 Convert the FBgn symbols to ENTREZID since VISEAGO accesses GO annotations from the NCBI EntrezGene, Ensembl or Uniprot databases. To get the ENTREZID we will use data from the the "org.Dm.eg.db" AnnotationDb object which was loaded in the beginning of our analysis. 
 
 
-To do this, we will create afunction called "FBgn_to_ENTREZID_function". In this function, we will use the "mapIds()" function, to look in the rownames of each file in "Expression_Dataframe" which contain the "FLYBASE" keytype. For each"FLYBASE"keytype return the ENTREZID. If multiple ENTREZID are available, give me the first one. Save this in a data.frame called "FBgn_to_ENTREZID".
+To do this, we will create afunction called "FBgn_to_ENTREZID_function". In this function, we will use the "mapIds()" function, to look in the rownames of each file in "Expression_Dataframe" which contain the "FLYBASE" keytype. For each"FLYBASE"keytype return the ENTREZID. 
+If multiple ENTREZID are available, give me the first one. Save this in a data.frame called "FBgn_to_ENTREZID".
 
 ```{r}
 
